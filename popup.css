@@ -1,0 +1,114 @@
+body {
+  width: 420px;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: #f8f9fa;
+  color: #333;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+.header {
+  text-align: center;
+  background: linear-gradient(135deg, #007bff, #0056b3);
+  color: white;
+  padding: 15px;
+  border-radius: 0;
+}
+h2 { margin: 0; font-size: 18px; font-weight: 600; }
+.version { font-size: 11px; opacity: 0.9; }
+.main-content { padding: 20px; }
+.input-section { 
+  display: flex; 
+  margin-bottom: 15px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  border-radius: 6px;
+  overflow: hidden;
+}
+input[type="text"] { 
+  flex: 1; 
+  padding: 12px 15px; 
+  border: none; 
+  background: white;
+  color: #333;
+  font-size: 14px;
+  outline: none;
+}
+button { 
+  padding: 12px 20px; 
+  background: #28a745; 
+  color: white; 
+  border: none; 
+  cursor: pointer; 
+  font-weight: 600;
+  font-size: 14px;
+  transition: background 0.2s;
+}
+button:hover { background: #218838; }
+ul { 
+  list-style: none; 
+  padding: 0; 
+  margin: 0 0 20px 0; 
+  max-height: 200px;
+  overflow-y: auto;
+}
+li { 
+  background: white; 
+  margin: 6px 0; 
+  padding: 12px 15px; 
+  border-radius: 6px; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border-left: 4px solid #007bff;
+}
+li button { 
+  background: #dc3545; 
+  padding: 6px 10px; 
+  border-radius: 4px; 
+  font-size: 12px;
+  font-weight: 500;
+}
+li button:hover { background: #c82333; }
+.controls { 
+  background: #f8f9fa; 
+  padding: 15px; 
+  border-radius: 6px; 
+  margin-bottom: 20px;
+  border: 1px solid #e9ecef;
+}
+.controls label { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  font-weight: 500;
+}
+select {
+  padding: 6px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  background: white;
+  font-size: 14px;
+}
+.analytics { 
+  background: #e9ecef; 
+  padding: 15px; 
+  border-radius: 6px;
+  border-left: 4px solid #17a2b8;
+}
+.analytics h3 { 
+  margin: 0 0 10px 0; 
+  font-size: 16px; 
+  color: #495057;
+}
+.analytics p { 
+  margin: 0 0 10px 0; 
+  font-size: 13px; 
+  color: #6c757d;
+}
+#clearCacheBtn {
+  background: #6c757d;
+  padding: 8px 16px;
+  font-size: 12px;
+}
+#clearCacheBtn:hover { background: #5a6268; }

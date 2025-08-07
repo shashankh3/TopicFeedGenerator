@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>YouTube Topic Feed Dashboard</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    body {
+      margin: 0;
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+      color: #e2e8f0;
+      width: 400px;
+      min-height: 500px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    header {
+      padding: 20px 24px;
+      background: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      margin: 0;
+      color: #f1f5f9;
+    }
+
+    .stats-overview {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    main {
+      flex-grow: 1;
+      padding: 24px;
+      overflow-y: auto;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 24px;
+    }
+
+    input[type="text"] {
+      flex-grow: 1;
+      padding: 12px 16px;
+      border-radius: 8px;
+      border: 1px solid rgba(148, 163, 184, 0.2);
+      background: rgba(30, 41, 59, 0.5);
+      color: #f1f5f9;
+      font-size: 14px;
+      transition: border-color 0.3s, box-shadow 0.3s;
+    }
+
+    input[type="text"]:focus {
+      border-color: #6366f1;
+      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+      outline: none;
+    }
+
+    #addBtn {
+      padding: 12px 24px;
+      border-radius: 8px;
+      border: none;
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+    }
+
+    #addBtn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    #topics {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .topic-card {
+      background: rgba(30, 41, 59, 0.7);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.3s, transform 0.3s;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    .topic-card:hover {
+      background: rgba(30, 41, 59, 0.9);
+      transform: translateY(-2px);
+    }
+
+    .topic-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: #f1f5f9;
+    }
+
+    .remove {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      font-size: 20px;
+      cursor: pointer;
+      transition: color 0.3s;
+    }
+
+    .remove:hover {
+      color: #ef4444;
+    }
+
+    .empty-state {
+      text-align: center;
+      color: #94a3b8;
+      font-size: 14px;
+      padding: 40px 0;
+    }
+
+    /* Scrollbar */
+    main::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    main::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    main::-webkit-scrollbar-thumb {
+      background: rgba(148, 163, 184, 0.3);
+      border-radius: 3px;
+    }
+
+    main::-webkit-scrollbar-thumb:hover {
+      background: rgba(148, 163, 184, 0.5);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Topic Feed Dashboard</h1>
+    <span class="stats-overview" id="stats">0 Topics</span>
+  </header>
+  <main>
+    <div class="input-group">
+      <input type="text" id="topicInput" placeholder="Enter a new topic...">
+      <button id="addBtn">Add</button>
+    </div>
+    <div id="topics"></div>
+  </main>
+  <script src="popup.js"></script>
+</body>
+</html>
