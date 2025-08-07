@@ -1,6 +1,6 @@
 /**
- * YouTube Topic Feed Pro - Premium Chrome Content Script v7.8.1
- * Enhanced with View Count Sorting - Ultra-optimized for speed
+ * YouTube Topic Feed Pro - Enhanced Content Script v7.8.2
+ * Fixed: Video player overlay and reload issues
  */
 
 (function() {
@@ -11,8 +11,8 @@
         MAX_RETRIES: 3,
         RETRY_DELAY: 1000,
         MAX_VIDEOS_PER_TOPIC: 100,
-        CACHE_DURATION: 15 * 60 * 1000, // 15 minutes
-        GENERATION_THROTTLE: 2000,
+        CACHE_DURATION: 15 * 60 * 1000,
+        GENERATION_THROTTLE: 3000, // Increased for stability
         VIDEO_LOAD_TIMEOUT: 10000
     };
     
@@ -30,44 +30,60 @@
             this.isGenerating = false;
             this.lastGeneration = 0;
             this.videoCache = new Map();
-            this.generationQueue = [];
             this.retryCount = 0;
+            this.currentUrl = '';
             
             this.initialize();
         }
         
         async initialize() {
             try {
-                Logger.info('Initializing YouTube Topic Feed Manager with View Count Sorting');
+                Logger.info('Initializing YouTube Topic Feed Manager v7.8.2');
                 
-                // Check if we're on YouTube
                 if (!this.isYouTubePage()) {
                     Logger.warn('Not on YouTube page, skipping initialization');
                     return;
                 }
                 
-                // Setup storage listener with error handling
+                // Store initial URL
+                this.currentUrl = location.href;
+                
                 this.setupStorageListener();
-                
-                // Load initial topics
                 await this.loadTopics();
-                
-                // Setup page change detection
                 this.setupPageChangeDetection();
-                
-                // Setup cleanup on page unload
                 this.setupCleanup();
                 
                 Logger.info('Manager initialized successfully');
                 
             } catch (error) {
                 Logger.error('Failed to initialize manager', error);
-                this.handleCriticalError(error);
             }
         }
         
         isYouTubePage() {
             return window.location.hostname.includes('youtube.com');
+        }
+        
+        // NEW: Enhanced page type detection
+        isVideoPage() {
+            return window.location.pathname === '/watch' && window.location.search.includes('v=');
+        }
+        
+        isHomePage() {
+            return window.location.pathname === '/' || window.location.pathname === '/feed/subscriptions';
+        }
+        
+        isSearchPage() {
+            return window.location.pathname === '/results';
+        }
+        
+        isChannelPage() {
+            return window.location.pathname.startsWith('/@') || window.location.pathname.startsWith('/channel/') || window.location.pathname.startsWith('/c/');
+        }
+        
+        shouldShowFeed() {
+            // Only show feed on home, search, and channel pages - NOT on video pages
+            return this.isHomePage() || this.isSearchPage() || this.isChannelPage();
         }
         
         setupStorageListener() {
@@ -86,15 +102,14 @@
             try {
                 if (changes.topics) {
                     const newTopics = changes.topics.newValue || [];
-                    
-                    // Validate topics
                     const validTopics = this.validateTopics(newTopics);
                     
                     if (JSON.stringify(validTopics) !== JSON.stringify(this.currentTopics)) {
                         this.currentTopics = validTopics;
                         Logger.info('Topics updated from storage', { count: validTopics.length });
                         
-                        if (validTopics.length > 0) {
+                        // Only generate feed if we're on appropriate pages
+                        if (validTopics.length > 0 && this.shouldShowFeed()) {
                             await this.queueFeedGeneration();
                         } else {
                             this.clearExistingFeed();
@@ -113,17 +128,28 @@
                 
                 this.currentTopics = topics;
                 
-                if (topics.length > 0) {
-                    // Delay initial generation to let page load
+                if (topics.length > 0 && this.shouldShowFeed()) {
                     setTimeout(() => this.queueFeedGeneration(), 2000);
                 }
                 
-                Logger.info('Topics loaded from storage', { count: topics.length });
+                Logger.info('Topics loaded from storage', { 
+                    count: topics.length, 
+                    shouldShow: this.shouldShowFeed(),
+                    pageType: this.getPageType()
+                });
                 
             } catch (error) {
                 Logger.error('Failed to load topics', error);
                 this.currentTopics = [];
             }
+        }
+        
+        getPageType() {
+            if (this.isVideoPage()) return 'video';
+            if (this.isHomePage()) return 'home';
+            if (this.isSearchPage()) return 'search';
+            if (this.isChannelPage()) return 'channel';
+            return 'other';
         }
         
         validateTopics(topics) {
@@ -138,14 +164,25 @@
         }
         
         async queueFeedGeneration() {
-            // Throttle generation requests
+            // Enhanced checks before generation
+            if (!this.shouldShowFeed()) {
+                Logger.info('Skipping feed generation - not on appropriate page', {
+                    currentPage: this.getPageType(),
+                    url: location.href
+                });
+                this.clearExistingFeed();
+                return;
+            }
+            
             const now = Date.now();
             if (now - this.lastGeneration < CONFIG.GENERATION_THROTTLE) {
                 Logger.info('Generation throttled, queuing request');
                 
                 clearTimeout(this.generationTimeout);
                 this.generationTimeout = setTimeout(() => {
-                    this.generateFeed();
+                    if (this.shouldShowFeed()) { // Double-check before execution
+                        this.generateFeed();
+                    }
                 }, CONFIG.GENERATION_THROTTLE - (now - this.lastGeneration));
                 
                 return;
@@ -155,8 +192,11 @@
         }
         
         async generateFeed() {
-            if (this.isGenerating) {
-                Logger.warn('Feed generation already in progress');
+            if (this.isGenerating || !this.shouldShowFeed()) {
+                Logger.warn('Feed generation skipped', { 
+                    isGenerating: this.isGenerating, 
+                    shouldShow: this.shouldShowFeed() 
+                });
                 return;
             }
             
@@ -164,12 +204,12 @@
                 this.isGenerating = true;
                 this.lastGeneration = Date.now();
                 
-                Logger.info('Starting feed generation with view count sorting', { 
+                Logger.info('Starting feed generation with enhanced page detection', { 
                     topics: this.currentTopics.length,
+                    pageType: this.getPageType(),
                     retryCount: this.retryCount 
                 });
                 
-                // Clear existing feed
                 this.clearExistingFeed();
                 
                 if (this.currentTopics.length === 0) {
@@ -177,10 +217,8 @@
                     return;
                 }
                 
-                // Show loading indicator
                 this.showLoadingIndicator();
                 
-                // Fetch videos for all topics with view counts
                 const allVideos = await this.fetchAllVideosWithViews();
                 
                 if (allVideos.length === 0) {
@@ -188,18 +226,12 @@
                     return;
                 }
                 
-                // Sort by view count (already done in fetchAllVideosWithViews)
-                Logger.info('Videos sorted by view count', { 
-                    totalVideos: allVideos.length,
-                    topVideo: allVideos[0]?.views || 'N/A'
-                });
-                
-                // Create and inject feed
                 await this.createFeedUI(allVideos);
                 
-                this.retryCount = 0; // Reset retry count on success
+                this.retryCount = 0;
                 Logger.info('Feed generation completed successfully', { 
-                    videos: allVideos.length 
+                    videos: allVideos.length,
+                    pageType: this.getPageType()
                 });
                 
             } catch (error) {
@@ -211,6 +243,175 @@
             }
         }
         
+        // Enhanced page change detection with better filtering
+        setupPageChangeDetection() {
+            try {
+                let lastUrl = location.href;
+                let lastPathname = location.pathname;
+                
+                const observer = new MutationObserver(() => {
+                    const currentUrl = location.href;
+                    const currentPathname = location.pathname;
+                    
+                    if (currentUrl !== lastUrl || currentPathname !== lastPathname) {
+                        const wasVideoPage = lastPathname === '/watch';
+                        const isVideoPage = this.isVideoPage();
+                        const wasOtherPage = !wasVideoPage;
+                        const isOtherPage = !isVideoPage;
+                        
+                        Logger.info('Page navigation detected', {
+                            from: lastPathname,
+                            to: currentPathname,
+                            wasVideo: wasVideoPage,
+                            isVideo: isVideoPage
+                        });
+                        
+                        lastUrl = currentUrl;
+                        lastPathname = currentPathname;
+                        
+                        // Clear feed immediately when navigating TO video pages
+                        if (isVideoPage) {
+                            Logger.info('Navigated to video page - clearing feed');
+                            this.clearExistingFeed();
+                            return;
+                        }
+                        
+                        // Generate feed when navigating FROM video pages to other pages
+                        if (wasVideoPage && isOtherPage && this.currentTopics.length > 0) {
+                            Logger.info('Navigated from video to feed page - generating feed');
+                            setTimeout(() => {
+                                if (this.shouldShowFeed()) {
+                                    this.queueFeedGeneration();
+                                }
+                            }, 1000);
+                        }
+                        
+                        // Handle other page transitions
+                        if (wasOtherPage && isOtherPage && this.currentTopics.length > 0) {
+                            setTimeout(() => {
+                                if (this.shouldShowFeed()) {
+                                    this.queueFeedGeneration();
+                                }
+                            }, 1000);
+                        }
+                    }
+                });
+                
+                observer.observe(document, { subtree: true, childList: true });
+                
+                // Also listen to popstate for browser back/forward
+                window.addEventListener('popstate', () => {
+                    setTimeout(() => {
+                        if (this.isVideoPage()) {
+                            this.clearExistingFeed();
+                        } else if (this.shouldShowFeed() && this.currentTopics.length > 0) {
+                            this.queueFeedGeneration();
+                        }
+                    }, 500);
+                });
+                
+            } catch (error) {
+                Logger.error('Failed to setup page change detection', error);
+            }
+        }
+        
+        // Enhanced DOM insertion with better targeting
+        insertFeedIntoDOM(container) {
+            try {
+                // More specific selectors to avoid video player areas
+                const targetSelectors = [
+                    '#contents.ytd-rich-grid-renderer', // Home/search grid
+                    'ytd-browse[page-subtype="home"] #contents', // Home page
+                    'ytd-search #contents', // Search results
+                    'ytd-browse[page-subtype="channels"] #contents', // Channel page
+                    '#primary #contents', // Fallback
+                    '#contents' // Last resort
+                ];
+                
+                let target = null;
+                for (const selector of targetSelectors) {
+                    target = document.querySelector(selector);
+                    if (target && this.isValidInsertionTarget(target)) {
+                        break;
+                    }
+                }
+                
+                if (!target) {
+                    throw new Error('No suitable insertion point found');
+                }
+                
+                // Additional safety check
+                if (this.isVideoPage()) {
+                    Logger.warn('Attempted to insert feed on video page - aborting');
+                    return;
+                }
+                
+                if (target.firstChild) {
+                    target.insertBefore(container, target.firstChild);
+                } else {
+                    target.appendChild(container);
+                }
+                
+                // Trigger animation
+                requestAnimationFrame(() => {
+                    container.style.opacity = '1';
+                    container.style.transform = 'translateY(0)';
+                });
+                
+                this.addAnimationStyles();
+                
+                Logger.info('Feed inserted successfully', { 
+                    targetSelector: target.tagName + (target.id ? '#' + target.id : ''),
+                    pageType: this.getPageType()
+                });
+                
+            } catch (error) {
+                Logger.error('Failed to insert feed into DOM', error);
+                throw error;
+            }
+        }
+        
+        isValidInsertionTarget(element) {
+            // Avoid inserting near video player elements
+            const videoPlayerSelectors = [
+                'ytd-watch-flexy',
+                'ytd-player',
+                '#movie_player',
+                '.html5-video-player'
+            ];
+            
+            for (const selector of videoPlayerSelectors) {
+                if (element.closest(selector) || element.querySelector(selector)) {
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        clearExistingFeed() {
+            try {
+                const existing = document.getElementById('topic-feed-container-pro');
+                if (existing) {
+                    existing.remove();
+                    Logger.info('Existing feed cleared');
+                }
+                
+                // Also clear loading and error states
+                const loader = document.getElementById('topic-feed-loader-pro');
+                const error = document.getElementById('topic-feed-error-pro');
+                const empty = document.getElementById('topic-feed-empty-pro');
+                
+                [loader, error, empty].forEach(element => {
+                    if (element) element.remove();
+                });
+                
+            } catch (error) {
+                Logger.error('Failed to clear existing feed', error);
+            }
+        }
+        
+        // Rest of the methods remain the same as v7.8.1
         async fetchAllVideosWithViews() {
             const allVideos = [];
             const fetchPromises = [];
@@ -230,7 +431,6 @@
                     }
                 });
                 
-                // Sort all videos by view count descending
                 allVideos.sort((a, b) => b.views - a.views);
                 
             } catch (error) {
@@ -242,17 +442,13 @@
         
         async fetchVideosForTopicWithViews(topic) {
             try {
-                // Check cache first
                 const cached = this.getCachedVideos(topic);
                 if (cached) {
                     Logger.info(`Using cached videos for topic: ${topic}`);
                     return cached;
                 }
                 
-                // Fetch fresh videos with view counts
                 const videos = await this.fetchRealVideosWithViews(topic);
-                
-                // Cache the results
                 this.cacheVideos(topic, videos);
                 
                 Logger.info(`Fetched ${videos.length} videos with view counts for topic: ${topic}`);
@@ -310,7 +506,6 @@
             try {
                 const videos = [];
                 
-                // Method 1: Try to parse from ytInitialData (most reliable)
                 const ytDataMatch = html.match(/var ytInitialData = (\{.*?\});/s);
                 if (ytDataMatch) {
                     try {
@@ -325,13 +520,11 @@
                     }
                 }
                 
-                // Method 2: Fallback to regex parsing with view count extraction
                 const videoIdRegex = /"videoId":"([^"]{11})"/g;
                 const matches = [...html.matchAll(videoIdRegex)];
                 const uniqueIds = [...new Set(matches.map(match => match[1]))];
                 
                 for (const id of uniqueIds.slice(0, CONFIG.MAX_VIDEOS_PER_TOPIC)) {
-                    // Skip Shorts
                     if (this.isYouTubeShort(html, id)) {
                         continue;
                     }
@@ -350,7 +543,6 @@
                     });
                 }
                 
-                // Sort by view count descending
                 videos.sort((a, b) => b.views - a.views);
                 
                 Logger.info(`Parsed ${videos.length} videos with view counts for topic: ${topic}`);
@@ -379,7 +571,6 @@
                         const id = renderer.videoId;
                         if (!id) continue;
                         
-                        // Skip Shorts
                         if (renderer.thumbnailOverlays?.some(overlay => 
                             overlay.thumbnailOverlayTimeStatusRenderer?.style === 'SHORTS')) {
                             continue;
@@ -419,7 +610,6 @@
         
         extractViewCount(html, videoId) {
             try {
-                // Multiple patterns to catch different view count formats
                 const patterns = [
                     new RegExp(`"videoId":"${videoId}"[^}]*?"viewCountText":\\{"simpleText":"([^"]+)"`),
                     new RegExp(`"videoId":"${videoId}"[^}]*?"shortViewCountText":\\{"simpleText":"([^"]+)"`),
@@ -433,7 +623,7 @@
                     }
                 }
                 
-                return 0; // Default if no view count found
+                return 0;
                 
             } catch (error) {
                 Logger.warn(`Failed to extract view count for video ${videoId}`, error);
@@ -444,16 +634,14 @@
         parseViewCountText(viewText) {
             if (!viewText || typeof viewText !== 'string') return 0;
             
-            // Remove "views" and clean the string
             const cleaned = viewText.toLowerCase()
                 .replace(/views?/g, '')
-                .replace(/watching/g, '') // For live streams
+                .replace(/watching/g, '')
                 .trim();
             
             if (!cleaned) return 0;
             
             try {
-                // Handle abbreviated numbers (1.2M, 50K, etc.)
                 if (cleaned.includes('m')) {
                     const num = parseFloat(cleaned.replace(/[^\d.]/g, ''));
                     return Math.floor(num * 1000000);
@@ -461,7 +649,6 @@
                     const num = parseFloat(cleaned.replace(/[^\d.]/g, ''));
                     return Math.floor(num * 1000);
                 } else {
-                    // Handle regular numbers with commas
                     const num = cleaned.replace(/[^\d]/g, '');
                     return parseInt(num) || 0;
                 }
@@ -631,47 +818,6 @@
             return card;
         }
         
-        insertFeedIntoDOM(container) {
-            try {
-                const targetSelectors = [
-                    '#contents.ytd-rich-grid-renderer',
-                    '#primary #contents',
-                    '#primary',
-                    'ytd-app #content',
-                    '#content'
-                ];
-                
-                let target = null;
-                for (const selector of targetSelectors) {
-                    target = document.querySelector(selector);
-                    if (target) break;
-                }
-                
-                if (!target) {
-                    throw new Error('No suitable insertion point found');
-                }
-                
-                if (target.firstChild) {
-                    target.insertBefore(container, target.firstChild);
-                } else {
-                    target.appendChild(container);
-                }
-                
-                // Trigger animation
-                requestAnimationFrame(() => {
-                    container.style.opacity = '1';
-                    container.style.transform = 'translateY(0)';
-                });
-                
-                // Add animation styles
-                this.addAnimationStyles();
-                
-            } catch (error) {
-                Logger.error('Failed to insert feed into DOM', error);
-                throw error;
-            }
-        }
-        
         addAnimationStyles() {
             if (document.getElementById('topic-feed-animations')) return;
             
@@ -688,19 +834,9 @@
             document.head.appendChild(style);
         }
         
-        clearExistingFeed() {
-            try {
-                const existing = document.getElementById('topic-feed-container-pro');
-                if (existing) {
-                    existing.remove();
-                    Logger.info('Existing feed cleared');
-                }
-            } catch (error) {
-                Logger.error('Failed to clear existing feed', error);
-            }
-        }
-        
         showLoadingIndicator() {
+            if (!this.shouldShowFeed()) return;
+            
             this.clearExistingFeed();
             
             const loader = document.createElement('div');
@@ -727,6 +863,8 @@
         }
         
         showEmptyState() {
+            if (!this.shouldShowFeed()) return;
+            
             const emptyState = document.createElement('div');
             emptyState.id = 'topic-feed-empty-pro';
             emptyState.style.cssText = `
@@ -748,6 +886,8 @@
         
         insertElementIntoDOM(element) {
             try {
+                if (!this.shouldShowFeed()) return;
+                
                 const target = document.querySelector('#contents') || document.querySelector('#primary') || document.body;
                 target.insertBefore(element, target.firstChild);
             } catch (error) {
@@ -761,7 +901,9 @@
                 Logger.warn(`Retrying feed generation (attempt ${this.retryCount}/${CONFIG.MAX_RETRIES})`);
                 
                 setTimeout(() => {
-                    this.generateFeed();
+                    if (this.shouldShowFeed()) {
+                        this.generateFeed();
+                    }
                 }, CONFIG.RETRY_DELAY * this.retryCount);
             } else {
                 Logger.error('Max retries reached, showing error state');
@@ -770,6 +912,8 @@
         }
         
         showErrorState(error) {
+            if (!this.shouldShowFeed()) return;
+            
             const errorState = document.createElement('div');
             errorState.id = 'topic-feed-error-pro';
             errorState.style.cssText = `
@@ -795,54 +939,6 @@
             this.insertElementIntoDOM(errorState);
         }
         
-        handleCriticalError(error) {
-            Logger.error('Critical error in extension', error);
-            
-            // Try to show minimal error message
-            try {
-                const errorDiv = document.createElement('div');
-                errorDiv.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #ef4444;
-                    color: white;
-                    padding: 16px;
-                    border-radius: 8px;
-                    z-index: 10000;
-                    font-size: 14px;
-                    max-width: 300px;
-                `;
-                errorDiv.textContent = 'YouTube Topic Feed extension encountered an error. Please refresh the page.';
-                document.body.appendChild(errorDiv);
-                
-                setTimeout(() => errorDiv.remove(), 10000);
-            } catch (displayError) {
-                Logger.error('Failed to display critical error', displayError);
-            }
-        }
-        
-        setupPageChangeDetection() {
-            try {
-                // Monitor URL changes for SPA navigation
-                let lastUrl = location.href;
-                new MutationObserver(() => {
-                    const url = location.href;
-                    if (url !== lastUrl) {
-                        lastUrl = url;
-                        Logger.info('Page navigation detected');
-                        
-                        if (this.currentTopics.length > 0) {
-                            setTimeout(() => this.queueFeedGeneration(), 1000);
-                        }
-                    }
-                }).observe(document, { subtree: true, childList: true });
-                
-            } catch (error) {
-                Logger.error('Failed to setup page change detection', error);
-            }
-        }
-        
         setupCleanup() {
             try {
                 window.addEventListener('beforeunload', () => {
@@ -855,12 +951,10 @@
         
         cleanup() {
             try {
-                // Clear timeouts
                 if (this.generationTimeout) {
                     clearTimeout(this.generationTimeout);
                 }
                 
-                // Clear cache
                 this.videoCache.clear();
                 
                 Logger.info('Extension cleanup completed');
@@ -869,7 +963,6 @@
             }
         }
         
-        // Cache management
         getCachedVideos(topic) {
             const cached = this.videoCache.get(topic);
             if (cached && Date.now() - cached.timestamp < CONFIG.CACHE_DURATION) {
@@ -885,7 +978,6 @@
             });
         }
         
-        // Utility methods
         async safeStorageGet(keys) {
             try {
                 if (typeof chrome !== 'undefined' && chrome.storage) {
@@ -905,37 +997,32 @@
         }
     }
     
-    // Premium initialization with comprehensive error handling
+    // Enhanced initialization
     const initializeContentScript = () => {
         try {
-            // Ensure we're in the right context
             if (typeof window === 'undefined' || typeof document === 'undefined') {
                 throw new Error('Invalid execution context');
             }
             
-            // Check for required APIs
             if (typeof chrome === 'undefined' || !chrome.storage) {
                 throw new Error('Chrome extension APIs not available');
             }
             
-            // Initialize feed manager
             window.topicFeedManager = new YouTubeTopicFeedManager();
             
-            Logger.info('Content script with view count sorting initialized successfully');
+            Logger.info('Enhanced content script v7.8.2 initialized successfully');
             
         } catch (error) {
             Logger.error('Failed to initialize content script', error);
         }
     };
     
-    // Premium document ready handler
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', initializeContentScript);
     } else {
         initializeContentScript();
     }
     
-    // Add global error handler
     window.addEventListener('error', (e) => {
         Logger.error('Global content script error', {
             message: e.message,
