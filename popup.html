@@ -1,171 +1,277 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>YouTube Topic Feed Dashboard</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YouTube Topic Feed Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-    body {
-      margin: 0;
-      font-family: 'Inter', sans-serif;
-      background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
-      color: #e2e8f0;
-      width: 400px;
-      min-height: 500px;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
+  body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+    color: #e2e8f0;
+    width: 400px;
+    min-height: 500px;
+    display: flex;
+    flex-direction: column;
+  }
 
-    header {
-      padding: 20px 24px;
-      background: rgba(30, 41, 59, 0.8);
-      backdrop-filter: blur(10px);
-      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
+  header {
+    padding: 20px 24px;
+    background: rgba(30, 41, 59, 0.9);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
 
-    header h1 {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 0;
-      color: #f1f5f9;
-    }
+  header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0;
+    color: #f1f5f9;
+  }
 
-    .stats-overview {
-      font-size: 12px;
-      color: #94a3b8;
-    }
+  .stats-overview {
+    font-size: 12px;
+    color: #94a3b8;
+    padding: 4px 8px;
+    background: rgba(99, 102, 241, 0.1);
+    border-radius: 12px;
+  }
 
-    main {
-      flex-grow: 1;
-      padding: 24px;
-      overflow-y: auto;
-    }
+  main {
+    flex-grow: 1;
+    padding: 20px 24px;
+    overflow-y: auto;
+  }
 
-    .input-group {
-      display: flex;
-      gap: 8px;
-      margin-bottom: 24px;
-    }
+  .input-section {
+    margin-bottom: 24px;
+  }
 
-    input[type="text"] {
-      flex-grow: 1;
-      padding: 12px 16px;
-      border-radius: 8px;
-      border: 1px solid rgba(148, 163, 184, 0.2);
-      background: rgba(30, 41, 59, 0.5);
-      color: #f1f5f9;
-      font-size: 14px;
-      transition: border-color 0.3s, box-shadow 0.3s;
-    }
+  .input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
 
-    input[type="text"]:focus {
-      border-color: #6366f1;
-      box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
-      outline: none;
-    }
+  .file-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: rgba(30, 41, 59, 0.4);
+    border-radius: 8px;
+    border: 1px dashed rgba(99, 102, 241, 0.3);
+  }
 
-    #addBtn {
-      padding: 12px 24px;
-      border-radius: 8px;
-      border: none;
-      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-      color: #ffffff;
-      font-weight: 600;
-      font-size: 14px;
-      cursor: pointer;
-      transition: transform 0.3s, box-shadow 0.3s;
-    }
+  input[type="text"] {
+    flex-grow: 1;
+    padding: 12px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(30, 41, 59, 0.6);
+    color: #f1f5f9;
+    font-size: 14px;
+    transition: all 0.3s;
+  }
 
-    #addBtn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-    }
+  input[type="text"]:focus {
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    outline: none;
+  }
 
-    #topics {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
+  input[type="file"] {
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    background: rgba(30, 41, 59, 0.6);
+    color: #cbd5e1;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
 
-    .topic-card {
-      background: rgba(30, 41, 59, 0.7);
-      border-radius: 12px;
-      padding: 16px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: background 0.3s, transform 0.3s;
-      border: 1px solid rgba(148, 163, 184, 0.1);
-    }
+  input[type="file"]:hover {
+    border-color: #6366f1;
+  }
 
-    .topic-card:hover {
-      background: rgba(30, 41, 59, 0.9);
-      transform: translateY(-2px);
-    }
+  button {
+    padding: 12px 16px;
+    border: none;
+    border-radius: 8px;
+    background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+    color: white;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+  }
 
-    .topic-name {
-      font-size: 15px;
-      font-weight: 500;
-      color: #f1f5f9;
-    }
+  button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+  }
 
-    .remove {
-      background: transparent;
-      border: none;
-      color: #94a3b8;
-      font-size: 20px;
-      cursor: pointer;
-      transition: color 0.3s;
-    }
+  button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
 
-    .remove:hover {
-      color: #ef4444;
-    }
+  .file-label {
+    font-size: 13px;
+    color: #cbd5e1;
+    font-weight: 500;
+    margin-bottom: 4px;
+  }
 
-    .empty-state {
-      text-align: center;
-      color: #94a3b8;
-      font-size: 14px;
-      padding: 40px 0;
-    }
+  .file-help {
+    font-size: 12px;
+    color: #94a3b8;
+    font-style: italic;
+  }
 
-    /* Scrollbar */
-    main::-webkit-scrollbar {
-      width: 6px;
-    }
+  #topics {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
 
-    main::-webkit-scrollbar-track {
-      background: transparent;
-    }
+  .topic-card {
+    background: rgba(30, 41, 59, 0.8);
+    border-radius: 12px;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    transition: all 0.3s;
+  }
 
-    main::-webkit-scrollbar-thumb {
-      background: rgba(148, 163, 184, 0.3);
-      border-radius: 3px;
-    }
+  .topic-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(99, 102, 241, 0.3);
+  }
 
-    main::-webkit-scrollbar-thumb:hover {
-      background: rgba(148, 163, 184, 0.5);
-    }
-  </style>
+  .topic-name {
+    font-size: 15px;
+    font-weight: 500;
+    color: #f1f5f9;
+    flex-grow: 1;
+    margin-right: 12px;
+    word-break: break-word;
+  }
+
+  .remove {
+    width: 28px;
+    height: 28px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 8px;
+    color: #f87171;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s;
+  }
+
+  .remove:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.4);
+    transform: scale(1.1);
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  .message {
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    margin-bottom: 16px;
+    transition: all 0.3s;
+  }
+
+  .message.success {
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    color: #4ade80;
+  }
+
+  .message.error {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    color: #f87171;
+  }
+
+  .message.hidden {
+    display: none;
+  }
+
+  /* Scrollbar styling */
+  #topics::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  #topics::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  #topics::-webkit-scrollbar-thumb {
+    background: rgba(148, 163, 184, 0.3);
+    border-radius: 3px;
+  }
+
+  #topics::-webkit-scrollbar-thumb:hover {
+    background: rgba(148, 163, 184, 0.5);
+  }
+</style>
 </head>
 <body>
   <header>
-    <h1>Topic Feed Dashboard</h1>
-    <span class="stats-overview" id="stats">0 Topics</span>
+    <h1>Topic Feed Pro</h1>
+    <div class="stats-overview" id="stats">0 Topics</div>
   </header>
+  
   <main>
-    <div class="input-group">
-      <input type="text" id="topicInput" placeholder="Enter a new topic...">
-      <button id="addBtn">Add</button>
-    </div>
-    <div id="topics"></div>
+    <section class="input-section">
+      <!-- Manual Input -->
+      <div class="input-group">
+        <input type="text" id="topicInput" 
+               placeholder="Enter a topic (e.g., AI, cooking, music)..."
+               maxlength="50" autocomplete="off">
+        <button id="addButton">Add Topic</button>
+      </div>
+      
+      <!-- File Import -->
+      <div class="file-input-group">
+        <div class="file-label">📁 Import Topics from File</div>
+        <input type="file" id="fileInput" accept=".txt">
+        <div class="file-help">Upload a .txt file with one topic per line</div>
+      </div>
+      
+      <!-- Status Message -->
+      <div id="message" class="message hidden"></div>
+    </section>
+    
+    <section id="topics"></section>
   </main>
+  
   <script src="popup.js"></script>
 </body>
 </html>
