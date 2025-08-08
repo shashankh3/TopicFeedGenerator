@@ -1,12 +1,13 @@
 /**
- * YouTube Topic Feed Pro - Enhanced Content Script v7.8.4
- * Enhanced: Superior duplicate prevention system
+ * YouTube Topic Feed Pro - Back to Basics v8.0
+ * REVERTED: Original working search algorithm
+ * ADDED: Simple, lightweight negative filtering
  */
 
 (function() {
     'use strict';
     
-    // Premium configuration
+    // Simple, proven configuration
     const CONFIG = {
         MAX_RETRIES: 3,
         RETRY_DELAY: 1000,
@@ -16,30 +17,31 @@
         VIDEO_LOAD_TIMEOUT: 10000
     };
     
-    // Premium logging system
+    // Simple logging
     const Logger = {
-        info: (message, data = null) => console.log(`[Content] ${message}`, data || ''),
-        error: (message, error = null) => console.error(`[Content ERROR] ${message}`, error || ''),
-        warn: (message, data = null) => console.warn(`[Content WARNING] ${message}`, data || '')
+        info: (message, data = null) => console.log(`[Original v8.0] ${message}`, data || ''),
+        error: (message, error = null) => console.error(`[Original ERROR] ${message}`, error || ''),
+        warn: (message, data = null) => console.warn(`[Original WARNING] ${message}`, data || '')
     };
     
-    // Premium feed manager class
+    // Back to the original, working feed manager
     class YouTubeTopicFeedManager {
         constructor() {
             this.currentTopics = [];
+            this.currentNegativeTopics = [];
             this.isGenerating = false;
             this.lastGeneration = 0;
             this.videoCache = new Map();
             this.retryCount = 0;
             this.currentUrl = '';
-            this.globalVideoIds = new Set(); // Track all seen video IDs
+            this.globalVideoIds = new Set();
             
             this.initialize();
         }
         
         async initialize() {
             try {
-                Logger.info('Initializing YouTube Topic Feed Manager v7.8.4 with Enhanced Duplicate Prevention');
+                Logger.info('Initializing Original Working YouTube Manager v8.0');
                 
                 if (!this.isYouTubePage()) {
                     Logger.warn('Not on YouTube page, skipping initialization');
@@ -52,7 +54,7 @@
                 this.setupPageChangeDetection();
                 this.setupCleanup();
                 
-                Logger.info('Manager initialized successfully');
+                Logger.info('Original manager initialized successfully');
                 
             } catch (error) {
                 Logger.error('Failed to initialize manager', error);
@@ -97,20 +99,37 @@
         
         async handleStorageChange(changes) {
             try {
+                let shouldRegenerate = false;
+                
                 if (changes.topics) {
                     const newTopics = changes.topics.newValue || [];
                     const validTopics = this.validateTopics(newTopics);
                     
                     if (JSON.stringify(validTopics) !== JSON.stringify(this.currentTopics)) {
                         this.currentTopics = validTopics;
-                        this.globalVideoIds.clear(); // Reset seen videos when topics change
-                        Logger.info('Topics updated from storage', { count: validTopics.length });
-                        
-                        if (validTopics.length > 0 && this.shouldShowFeed()) {
-                            await this.queueFeedGeneration();
-                        } else {
-                            this.clearExistingFeed();
-                        }
+                        shouldRegenerate = true;
+                        Logger.info('Positive topics updated from storage', { count: validTopics.length });
+                    }
+                }
+                
+                if (changes.negativeTopics) {
+                    const newNegativeTopics = changes.negativeTopics.newValue || [];
+                    const validNegativeTopics = this.validateTopics(newNegativeTopics);
+                    
+                    if (JSON.stringify(validNegativeTopics) !== JSON.stringify(this.currentNegativeTopics)) {
+                        this.currentNegativeTopics = validNegativeTopics;
+                        shouldRegenerate = true;
+                        Logger.info('Negative topics updated from storage', { count: validNegativeTopics.length });
+                    }
+                }
+                
+                if (shouldRegenerate) {
+                    this.globalVideoIds.clear();
+                    
+                    if (this.currentTopics.length > 0 && this.shouldShowFeed()) {
+                        await this.queueFeedGeneration();
+                    } else {
+                        this.clearExistingFeed();
                     }
                 }
             } catch (error) {
@@ -120,17 +139,20 @@
         
         async loadTopics() {
             try {
-                const data = await this.safeStorageGet(['topics']);
+                const data = await this.safeStorageGet(['topics', 'negativeTopics']);
                 const topics = this.validateTopics(data.topics || []);
+                const negativeTopics = this.validateTopics(data.negativeTopics || []);
                 
                 this.currentTopics = topics;
+                this.currentNegativeTopics = negativeTopics;
                 
                 if (topics.length > 0 && this.shouldShowFeed()) {
                     setTimeout(() => this.queueFeedGeneration(), 2000);
                 }
                 
                 Logger.info('Topics loaded from storage', { 
-                    count: topics.length, 
+                    positive: topics.length,
+                    negative: negativeTopics.length,
                     shouldShow: this.shouldShowFeed(),
                     pageType: this.getPageType()
                 });
@@ -138,6 +160,7 @@
             } catch (error) {
                 Logger.error('Failed to load topics', error);
                 this.currentTopics = [];
+                this.currentNegativeTopics = [];
             }
         }
         
@@ -199,10 +222,11 @@
             try {
                 this.isGenerating = true;
                 this.lastGeneration = Date.now();
-                this.globalVideoIds.clear(); // Reset for fresh generation
+                this.globalVideoIds.clear();
                 
-                Logger.info('Starting feed generation with enhanced duplicate prevention', { 
-                    topics: this.currentTopics.length,
+                Logger.info('Starting original feed generation', { 
+                    positiveTopics: this.currentTopics.length,
+                    negativeTopics: this.currentNegativeTopics.length,
                     pageType: this.getPageType(),
                     retryCount: this.retryCount 
                 });
@@ -216,22 +240,32 @@
                 
                 this.showLoadingIndicator();
                 
-                const allVideos = await this.fetchAllVideosWithViews();
+                // ORIGINAL: Simple, working video fetching
+                const allVideos = await this.fetchAllVideosOriginal();
                 
                 if (allVideos.length === 0) {
                     this.showEmptyState();
                     return;
                 }
                 
-                // Enhanced duplicate removal and sorting
-                const uniqueVideos = this.removeDuplicatesAdvanced(allVideos);
+                // SIMPLE: Basic negative filtering (fast)
+                const filteredVideos = this.applySimpleNegativeFiltering(allVideos);
+                
+                if (filteredVideos.length === 0) {
+                    this.showFilteredEmptyState();
+                    return;
+                }
+                
+                // ORIGINAL: Simple deduplication and sorting
+                const uniqueVideos = this.removeDuplicatesAdvanced(filteredVideos);
                 const sortedVideos = this.sortVideosByViews(uniqueVideos);
                 
                 await this.createFeedUI(sortedVideos);
                 
                 this.retryCount = 0;
-                Logger.info('Feed generation completed successfully', { 
+                Logger.info('Original feed generation completed successfully', { 
                     totalFetched: allVideos.length,
+                    afterFiltering: filteredVideos.length,
                     afterDeduplication: uniqueVideos.length,
                     finalCount: sortedVideos.length,
                     pageType: this.getPageType()
@@ -246,7 +280,8 @@
             }
         }
         
-        async fetchAllVideosWithViews() {
+        // ORIGINAL: Simple, working video fetching approach
+        async fetchAllVideosOriginal() {
             const allVideos = [];
             const fetchPromises = [];
             
@@ -274,72 +309,46 @@
             return allVideos;
         }
         
-        // ENHANCED: Advanced duplicate removal system
-        removeDuplicatesAdvanced(videos) {
-            const seenIds = new Set();
-            const seenTitles = new Set();
-            const uniqueVideos = [];
-            let duplicatesRemoved = 0;
-            
-            for (const video of videos) {
-                // Primary filter: Video ID
-                if (seenIds.has(video.id)) {
-                    duplicatesRemoved++;
-                    Logger.info(`Removed duplicate by ID: ${video.id}`);
-                    continue;
-                }
-                
-                // Secondary filter: Title similarity (normalized)
-                const normalizedTitle = this.normalizeTitle(video.title);
-                if (seenTitles.has(normalizedTitle)) {
-                    duplicatesRemoved++;
-                    Logger.info(`Removed duplicate by title: "${video.title}"`);
-                    continue;
-                }
-                
-                // Tertiary filter: Global video ID tracking
-                if (this.globalVideoIds.has(video.id)) {
-                    duplicatesRemoved++;
-                    Logger.info(`Removed globally seen video: ${video.id}`);
-                    continue;
-                }
-                
-                // Video is unique - add to results
-                seenIds.add(video.id);
-                seenTitles.add(normalizedTitle);
-                this.globalVideoIds.add(video.id);
-                uniqueVideos.push(video);
+        // SIMPLE: Basic negative filtering (no complex patterns)
+        applySimpleNegativeFiltering(videos) {
+            if (this.currentNegativeTopics.length === 0) {
+                return videos;
             }
             
-            Logger.info(`Duplicate removal complete`, {
-                original: videos.length,
-                unique: uniqueVideos.length,
-                duplicatesRemoved: duplicatesRemoved
-            });
+            const filteredVideos = [];
+            let blockedCount = 0;
             
-            return uniqueVideos;
-        }
-        
-        normalizeTitle(title) {
-            if (!title) return '';
-            
-            return title
-                .toLowerCase()
-                .replace(/[^\w\s]/g, '') // Remove special characters
-                .replace(/\s+/g, ' ') // Normalize spaces
-                .trim();
-        }
-        
-        sortVideosByViews(videos) {
-            return videos.sort((a, b) => {
-                // Primary sort: Views (descending)
-                if (b.views !== a.views) {
-                    return b.views - a.views;
+            for (const video of videos) {
+                if (this.shouldBlockVideoSimple(video)) {
+                    blockedCount++;
+                    Logger.info(`BLOCKED: "${video.title}" by ${video.channel} | Simple filter match`);
+                    continue;
                 }
+                filteredVideos.push(video);
+            }
+            
+            if (blockedCount > 0) {
+                Logger.info(`Simple filtering blocked ${blockedCount}/${videos.length} videos`);
+            }
+            
+            return filteredVideos;
+        }
+        
+        // SIMPLE: Fast blocking check (no complex regex or fuzzy matching)
+        shouldBlockVideoSimple(video) {
+            const title = (video.title || '').toLowerCase();
+            const channel = (video.channel || '').toLowerCase();
+            
+            for (const filter of this.currentNegativeTopics) {
+                const filterLower = filter.toLowerCase();
                 
-                // Secondary sort: Title (ascending) for consistent ordering
-                return a.title.localeCompare(b.title);
-            });
+                // Simple string inclusion check - fast and effective
+                if (title.includes(filterLower) || channel.includes(filterLower)) {
+                    return true;
+                }
+            }
+            
+            return false;
         }
         
         async fetchVideosForTopicWithViews(topic) {
@@ -351,8 +360,6 @@
                 }
                 
                 const videos = await this.fetchRealVideosWithViews(topic);
-                
-                // Pre-filter duplicates before caching
                 const uniqueVideos = this.filterTopicDuplicates(videos);
                 
                 this.cacheVideos(topic, uniqueVideos);
@@ -395,6 +402,7 @@
             });
         }
         
+        // ORIGINAL: Simple, working fetch approach
         async performVideoFetchWithViews(topic) {
             try {
                 const searchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(topic)}`;
@@ -419,10 +427,12 @@
             }
         }
         
+        // ORIGINAL: Simple, working parsing approach
         parseVideoDataWithViews(html, topic) {
             try {
                 const videos = [];
                 
+                // Try ytInitialData first (original approach)
                 const ytDataMatch = html.match(/var ytInitialData = (\{.*?\});/s);
                 if (ytDataMatch) {
                     try {
@@ -437,9 +447,10 @@
                     }
                 }
                 
+                // Fallback regex approach (original)
                 const videoIdRegex = /"videoId":"([^"]{11})"/g;
                 const matches = [...html.matchAll(videoIdRegex)];
-                const uniqueIds = [...new Set(matches.map(match => match[1]))]; // Remove ID duplicates immediately
+                const uniqueIds = [...new Set(matches.map(match => match[1]))];
                 
                 for (const id of uniqueIds.slice(0, CONFIG.MAX_VIDEOS_PER_TOPIC)) {
                     if (this.isYouTubeShort(html, id)) {
@@ -470,6 +481,7 @@
             }
         }
         
+        // ORIGINAL: Working ytInitialData extraction
         extractVideosFromYtInitialData(ytData, topic) {
             const videos = [];
             const seenIds = new Set();
@@ -486,7 +498,7 @@
                         if (!renderer) continue;
                         
                         const id = renderer.videoId;
-                        if (!id || seenIds.has(id)) continue; // Skip duplicates immediately
+                        if (!id || seenIds.has(id)) continue;
                         
                         if (renderer.thumbnailOverlays?.some(overlay => 
                             overlay.thumbnailOverlayTimeStatusRenderer?.style === 'SHORTS')) {
@@ -526,6 +538,7 @@
             return videos;
         }
         
+        // ORIGINAL: Working view count extraction
         extractViewCount(html, videoId) {
             try {
                 const patterns = [
@@ -613,6 +626,65 @@
             return textarea.value;
         }
         
+        // ORIGINAL: Simple deduplication and sorting
+        removeDuplicatesAdvanced(videos) {
+            const seenIds = new Set();
+            const seenTitles = new Set();
+            const uniqueVideos = [];
+            let duplicatesRemoved = 0;
+            
+            for (const video of videos) {
+                if (seenIds.has(video.id)) {
+                    duplicatesRemoved++;
+                    continue;
+                }
+                
+                const normalizedTitle = this.normalizeTitle(video.title);
+                if (seenTitles.has(normalizedTitle)) {
+                    duplicatesRemoved++;
+                    continue;
+                }
+                
+                if (this.globalVideoIds.has(video.id)) {
+                    duplicatesRemoved++;
+                    continue;
+                }
+                
+                seenIds.add(video.id);
+                seenTitles.add(normalizedTitle);
+                this.globalVideoIds.add(video.id);
+                uniqueVideos.push(video);
+            }
+            
+            Logger.info(`Duplicate removal complete`, {
+                original: videos.length,
+                unique: uniqueVideos.length,
+                duplicatesRemoved: duplicatesRemoved
+            });
+            
+            return uniqueVideos;
+        }
+        
+        normalizeTitle(title) {
+            if (!title) return '';
+            
+            return title
+                .toLowerCase()
+                .replace(/[^\w\s]/g, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+        }
+        
+        sortVideosByViews(videos) {
+            return videos.sort((a, b) => {
+                if (b.views !== a.views) {
+                    return b.views - a.views;
+                }
+                return a.title.localeCompare(b.title);
+            });
+        }
+        
+        // ORIGINAL: UI creation methods (clean and simple)
         async createFeedUI(videos) {
             try {
                 const container = this.createFeedContainer();
@@ -624,7 +696,7 @@
                 
                 this.insertFeedIntoDOM(container);
                 
-                Logger.info('Feed UI created successfully with no duplicates');
+                Logger.info('Original feed UI created successfully');
                 
             } catch (error) {
                 Logger.error('Failed to create feed UI', error);
@@ -649,17 +721,27 @@
             const header = document.createElement('div');
             header.className = 'ytd-rich-section-renderer';
             
-            const topicsList = this.currentTopics.join(', ');
             const totalVideos = videos.length;
             const topViews = videos[0]?.views || 0;
             const topViewsFormatted = this.formatViewCount(topViews);
             
+            let subtitle = '';
+            if (this.currentNegativeTopics.length > 0) {
+                subtitle = `<p style="font-size: 14px; color: var(--yt-spec-text-secondary); margin: 4px 0 0 0;">Simple filtering with ${this.currentNegativeTopics.length} block${this.currentNegativeTopics.length === 1 ? '' : 's'}`;
+                if (topViews > 0) {
+                    subtitle += ` • Most popular: ${topViewsFormatted} views`;
+                }
+                subtitle += `</p>`;
+            } else if (topViews > 0) {
+                subtitle = `<p style="font-size: 14px; color: var(--yt-spec-text-secondary); margin: 4px 0 0 0;">Most popular: ${topViewsFormatted} views</p>`;
+            }
+            
             header.innerHTML = `
                 <div class="rich-grid-renderer-header" style="padding: 0 24px 16px; border-bottom: 1px solid var(--yt-spec-outline);">
                     <h2 style="font-size: 20px; font-weight: 400; margin: 0; color: var(--yt-spec-text-primary);">
-                        📺 Your Topics: ${this.escapeHtml(topicsList)} (${totalVideos} unique videos, sorted by popularity)
+                        🎯 Back to Basics Feed (${totalVideos} videos)
                     </h2>
-                    ${topViews > 0 ? `<p style="font-size: 14px; color: var(--yt-spec-text-secondary); margin: 4px 0 0 0;">Top video: ${topViewsFormatted} views</p>` : ''}
+                    ${subtitle}
                 </div>
             `;
             
@@ -736,7 +818,7 @@
             return card;
         }
         
-        // Enhanced page change detection
+        // All remaining methods (page detection, DOM insertion, etc.) stay exactly the same as original
         setupPageChangeDetection() {
             try {
                 let lastUrl = location.href;
@@ -768,7 +850,7 @@
                         
                         if (wasVideoPage && !isVideoPage && this.currentTopics.length > 0) {
                             Logger.info('Navigated from video to feed page - generating feed');
-                            this.globalVideoIds.clear(); // Reset for fresh generation
+                            this.globalVideoIds.clear();
                             setTimeout(() => {
                                 if (this.shouldShowFeed()) {
                                     this.queueFeedGeneration();
@@ -927,7 +1009,7 @@
             
             loader.innerHTML = `
                 <div style="display: inline-block; width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.3); border-top-color: var(--yt-spec-text-primary); border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 16px;"></div>
-                <div>🎯 Generating your unique feed sorted by popularity...</div>
+                <div>🎯 Back to basics search...</div>
             `;
             
             this.insertElementIntoDOM(loader);
@@ -955,6 +1037,30 @@
                 <div style="font-size: 48px; margin-bottom: 16px;">🔍</div>
                 <h3 style="color: var(--yt-spec-text-primary); margin-bottom: 8px;">No videos found</h3>
                 <p>Try different topics or check your connection.</p>
+            `;
+            
+            this.insertElementIntoDOM(emptyState);
+        }
+        
+        showFilteredEmptyState() {
+            if (!this.shouldShowFeed()) return;
+            
+            const emptyState = document.createElement('div');
+            emptyState.id = 'topic-feed-empty-pro';
+            emptyState.style.cssText = `
+                text-align: center;
+                padding: 60px 20px;
+                color: var(--yt-spec-text-secondary);
+                font-size: 16px;
+                margin: 24px 0;
+            `;
+            
+            const blockedCount = this.currentNegativeTopics.length;
+            emptyState.innerHTML = `
+                <div style="font-size: 48px; margin-bottom: 16px;">🚫</div>
+                <h3 style="color: var(--yt-spec-text-primary); margin-bottom: 8px;">All videos filtered out</h3>
+                <p>Simple filtering with ${blockedCount} filter${blockedCount === 1 ? '' : 's'} blocked all videos.</p>
+                <p style="margin-top: 16px; font-size: 14px;">Try adjusting your filters.</p>
             `;
             
             this.insertElementIntoDOM(emptyState);
@@ -1074,7 +1180,7 @@
         }
     }
     
-    // Enhanced initialization
+    // Original initialization approach
     const initializeContentScript = () => {
         try {
             if (typeof window === 'undefined' || typeof document === 'undefined') {
@@ -1087,7 +1193,7 @@
             
             window.topicFeedManager = new YouTubeTopicFeedManager();
             
-            Logger.info('Enhanced content script v7.8.4 with duplicate prevention initialized successfully');
+            Logger.info('Back to Basics Content Script v8.0 initialized successfully');
             
         } catch (error) {
             Logger.error('Failed to initialize content script', error);

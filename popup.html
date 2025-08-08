@@ -12,8 +12,8 @@
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
     color: #e2e8f0;
-    width: 400px;
-    min-height: 500px;
+    width: 420px;
+    min-height: 600px;
     display: flex;
     flex-direction: column;
   }
@@ -49,8 +49,36 @@
     overflow-y: auto;
   }
 
-  .input-section {
+  .section {
     margin-bottom: 24px;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  .section-header h2 {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    color: #f1f5f9;
+  }
+
+  .section-header .icon {
+    font-size: 18px;
+  }
+
+  .positive-section .section-header .icon {
+    color: #10b981;
+  }
+
+  .negative-section .section-header .icon {
+    color: #ef4444;
   }
 
   .input-group {
@@ -70,6 +98,12 @@
     border: 1px dashed rgba(99, 102, 241, 0.3);
   }
 
+  .negative-input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
   input[type="text"] {
     flex-grow: 1;
     padding: 12px 16px;
@@ -85,6 +119,15 @@
     border-color: #6366f1;
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
     outline: none;
+  }
+
+  .negative-input {
+    border-color: rgba(239, 68, 68, 0.2) !important;
+  }
+
+  .negative-input:focus {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1) !important;
   }
 
   input[type="file"] {
@@ -125,6 +168,14 @@
     transform: none;
   }
 
+  .negative-button {
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%) !important;
+  }
+
+  .negative-button:hover:not(:disabled) {
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+  }
+
   .file-label {
     font-size: 13px;
     color: #cbd5e1;
@@ -138,11 +189,21 @@
     font-style: italic;
   }
 
-  #topics {
+  .negative-help {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-bottom: 12px;
+    padding: 8px 12px;
+    background: rgba(239, 68, 68, 0.05);
+    border: 1px solid rgba(239, 68, 68, 0.1);
+    border-radius: 6px;
+  }
+
+  .topic-list {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    max-height: 300px;
+    max-height: 200px;
     overflow-y: auto;
   }
 
@@ -162,6 +223,19 @@
     border-color: rgba(99, 102, 241, 0.3);
   }
 
+  .topic-card.negative {
+    background: rgba(30, 41, 59, 0.8);
+    border-color: rgba(239, 68, 68, 0.1);
+  }
+
+  .topic-card.negative:hover {
+    border-color: rgba(239, 68, 68, 0.3);
+  }
+
+  .topic-card.performance-mode {
+    transition: none;
+  }
+
   .topic-name {
     font-size: 15px;
     font-weight: 500;
@@ -169,6 +243,10 @@
     flex-grow: 1;
     margin-right: 12px;
     word-break: break-word;
+  }
+
+  .negative .topic-name {
+    color: #fca5a5;
   }
 
   .remove {
@@ -223,22 +301,28 @@
     display: none;
   }
 
-  /* Scrollbar styling */
-  #topics::-webkit-scrollbar {
+  /* Enhanced scrollbar for large lists */
+  .topic-list::-webkit-scrollbar {
     width: 6px;
   }
 
-  #topics::-webkit-scrollbar-track {
-    background: transparent;
-  }
-
-  #topics::-webkit-scrollbar-thumb {
-    background: rgba(148, 163, 184, 0.3);
+  .topic-list::-webkit-scrollbar-track {
+    background: rgba(30, 41, 59, 0.3);
     border-radius: 3px;
   }
 
-  #topics::-webkit-scrollbar-thumb:hover {
-    background: rgba(148, 163, 184, 0.5);
+  .topic-list::-webkit-scrollbar-thumb {
+    background: rgba(99, 102, 241, 0.5);
+    border-radius: 3px;
+  }
+
+  .topic-list::-webkit-scrollbar-thumb:hover {
+    background: rgba(99, 102, 241, 0.7);
+  }
+
+  /* Virtual scrolling optimizations */
+  .virtualized-container {
+    contain: layout style paint;
   }
 </style>
 </head>
@@ -249,8 +333,13 @@
   </header>
   
   <main>
-    <section class="input-section">
-      <!-- Manual Input -->
+    <!-- Positive Topics Section -->
+    <section class="section positive-section">
+      <div class="section-header">
+        <span class="icon">✅</span>
+        <h2>Topics You Want</h2>
+      </div>
+      
       <div class="input-group">
         <input type="text" id="topicInput" 
                placeholder="Enter a topic (e.g., AI, cooking, music)..."
@@ -258,18 +347,38 @@
         <button id="addButton">Add Topic</button>
       </div>
       
-      <!-- File Import -->
       <div class="file-input-group">
         <div class="file-label">📁 Import Topics from File</div>
         <input type="file" id="fileInput" accept=".txt">
         <div class="file-help">Upload a .txt file with one topic per line</div>
       </div>
       
-      <!-- Status Message -->
-      <div id="message" class="message hidden"></div>
+      <div id="topics" class="topic-list"></div>
+    </section>
+
+    <!-- Negative Topics Section -->
+    <section class="section negative-section">
+      <div class="section-header">
+        <span class="icon">🚫</span>
+        <h2>Block Topics/Channels</h2>
+      </div>
+      
+      <div class="negative-help">
+        Block videos from specific channels or containing certain topics/keywords.
+      </div>
+      
+      <div class="negative-input-group">
+        <input type="text" id="negativeTopicInput" class="negative-input"
+               placeholder="Enter channel name or topic to block..."
+               maxlength="50" autocomplete="off">
+        <button id="addNegativeButton" class="negative-button">Block</button>
+      </div>
+      
+      <div id="negativeTopics" class="topic-list"></div>
     </section>
     
-    <section id="topics"></section>
+    <!-- Status Message -->
+    <div id="message" class="message hidden"></div>
   </main>
   
   <script src="popup.js"></script>
